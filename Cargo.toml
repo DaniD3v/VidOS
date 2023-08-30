@@ -1,0 +1,15 @@
+[package]
+name = "vid_os"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "VidOS"
+path = "src/os/main.rs"
+
+[[bin]]
+name = "vid-converter"
+path = "src/converter/main.rs"
+
+[dependencies]
+sha2 = "0.10.7"
