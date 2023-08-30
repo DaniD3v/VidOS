@@ -16,5 +16,5 @@ build-std-features = ["compiler-builtins-mem"]
 build-std = ["core", "compiler_builtins"]
 
 [dependencies]
-gstreamer-rs = "0.21.0"
+gstreamer = "0.21.0"
 sha2 = "0.10.7"
