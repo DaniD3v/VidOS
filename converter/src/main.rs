@@ -1,31 +1,39 @@
-use std::collections::hash_map::DefaultHasher;
-use std::ffi::OsString;
+mod char;
+mod constants;
+mod converter;
+mod other;
 
-use std::fs::{read_dir, DirEntry};
-use std::hash::Hasher;
-use std::io::Error;
+use sha2::{Digest, Sha256};
+use std::ffi::OsString;
+use std::fs::{read_dir, File};
+use std::io;
+use std::path::PathBuf;
 
 fn main() {
-    let _files = get_unconverted_files();
+    let _files = get_unconverted_files().expect("io Error. Please report this issue on Github");
+    println!("{:?}", _files);
 }
 
-fn get_unconverted_files() -> Result<Vec<DirEntry>, Error> {
-    let out_names: Vec<_> = read_dir("./videos/out")?
-        .map(|entry| entry.map(|x| x.file_name()))
+fn hashed_filename(path: &PathBuf) -> Result<OsString, io::Error> {
+    let mut hasher = Sha256::new();
+    io::copy(&mut File::open(path)?, &mut hasher)?;
+    Ok(format!("{:x}.data", hasher.finalize()).into())
+}
+
+fn get_unconverted_files() -> Result<Vec<(PathBuf, OsString)>, io::Error> {
+    let output_videos: Vec<OsString> = read_dir("./videos/out")?
+        .map(|entry| Ok::<_, io::Error>(entry?.file_name()))
         .collect::<Result<_, _>>()?;
 
-    Ok(read_dir("./videos/in")?.map(|file|  {
-        file.map(|file| {
-            let mut hasher = DefaultHasher::new();
-            let contents = std::fs::read_to_string(file.path()).ok()?;
-            hasher.write(contents.as_bytes());
-            let name = format!("{:x}.data", hasher.finish());
+    let mut input_videos = Vec::new();
+    for entry in read_dir("./videos/in")? {
+        let path = entry?.path();
+        let hash = hashed_filename(&path)?;
 
-            println!("{name}");
+        if !output_videos.contains(&hash) {
+            input_videos.push((path, hash))
+        }
+    }
 
-            let name = OsString::from(name);
-
-            (!out_names.contains(&name)).then_some(file)
-        }).ok().flatten()
-    }).collect::<Option<Vec<_>>>().unwrap_or_default())
+    Ok(input_videos)
 }
