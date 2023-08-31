@@ -1,3 +1,3 @@
-/target
-/videos/in/*
-/videos/out/*
+*/target
+converter/videos/in/*
+converter/videos/out/*
