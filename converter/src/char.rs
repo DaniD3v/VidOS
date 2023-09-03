@@ -1,4 +1,5 @@
-use crate::constants::{BACKGROUND, CHARACTERS, FOREGROUND};
+use image::{Rgb, RgbImage};
+use crate::constants::{BACKGROUND, CHAR_HEIGHT, CHAR_WIDTH, CHARACTERS, FOREGROUND};
 
 pub struct Char<'a> {
     bitmap: &'a [u16; 9],
@@ -7,7 +8,7 @@ pub struct Char<'a> {
 }
 
 impl Char<'_> {
-    fn new(char: usize, foreground: usize, background: usize) -> Self {
+    pub fn new(char: usize, foreground: usize, background: usize) -> Self {
         Char {
             bitmap: &CHARACTERS[char],
             foreground_color: &FOREGROUND[foreground],
@@ -15,20 +16,32 @@ impl Char<'_> {
         }
     }
 
-    fn get_color(&self, x: u8, y: u8) -> [u8; 3] {
-        match self.bitmap[y as usize] & (1 << x) {
-            1 => *self.foreground_color,
-            _ => *self.background_color,
+    pub fn get_color(&self, x: u8, y: u8) -> Rgb<u8> {
+        match self.bitmap[x as usize] & (1 << y) != 0 {
+            true => Rgb::from(*self.foreground_color),
+            false => Rgb::from(*self.background_color),
         }
+    }
+
+    pub fn to_image(&self) -> RgbImage {
+        let mut image = RgbImage::new(CHAR_WIDTH, CHAR_HEIGHT);
+
+        for x in 0..CHAR_WIDTH {
+            for y in 0..CHAR_HEIGHT {
+                image.put_pixel(x, y, self.get_color(x as u8, y as u8));
+            }
+        }
+
+        image
     }
 }
 
-struct CharID {
+pub struct CharID {
     id: u16,
 }
 
 impl CharID {
-    fn new() -> Self {
+    pub fn new() -> Self {
         CharID { id: 0 }
     }
 }
@@ -37,6 +50,8 @@ impl Iterator for CharID {
     type Item = Char<'static>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if self.id == u16::MAX {return None;}
+
         let char = (self.id % 256) as usize;
         let foreground = ((self.id / 256) % 16) as usize;
         let background = ((self.id / 4096) % 8) as usize;
