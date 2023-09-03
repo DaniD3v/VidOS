@@ -15,21 +15,12 @@ impl Chunk<'_> {
         let mut min_difference = u32::MAX;
         let mut best_char = Char::new(0, 0, 0);
 
-        let pixels = self
-            .image
-            .pixels()
-            .map(|(_, _, color)| color)
-            .collect::<Vec<_>>();
-
         for possibility in CharID::new() {
-            let difference = self.difference(&possibility, min_difference)
+            let difference = self.difference(&possibility, min_difference);
 
-            match difference {
-                Some => {
-                    min_difference = difference;
-                    best_char = possibility;
-                }
-                None => ()
+            if difference.is_some() {
+                min_difference = difference.unwrap();
+                best_char = possibility;
             }
         }
 
@@ -48,7 +39,7 @@ impl Chunk<'_> {
                     difference += (pixel[color] as i32 - other_pixel[color] as i32).unsigned_abs();
                 }
 
-                if difference > stop: return None
+                if difference > stop {return None}
             }
         }
 
@@ -56,13 +47,13 @@ impl Chunk<'_> {
     }
 }
 
+// TODO: make this not awful
 pub fn chunk_up(image: RgbImage) -> Box<[[Char; VGA_WIDTH as usize]; VGA_HEIGHT as usize]> {
     let width = image.width();
     let height = image.height();
     assert_eq!(width, CHAR_WIDTH * VGA_WIDTH);
     assert_eq!(height, CHAR_HEIGHT * VGA_HEIGHT);
 
-    // TODO: make this not awful
     const UNINIT_CHAR: MaybeUninit<Char> = MaybeUninit::uninit();
     const UNINIT_ROW: MaybeUninit<[Char; VGA_WIDTH as usize]> = MaybeUninit::uninit();
 
@@ -84,7 +75,6 @@ pub fn chunk_up(image: RgbImage) -> Box<[[Char; VGA_WIDTH as usize]; VGA_HEIGHT 
         chars[row_index] = MaybeUninit::new(row.map(|x| unsafe { x.assume_init() }));
 
         row_index += 1;
-        println!("{row_index}");
     }
 
     Box::new(chars.map(|row| unsafe { row.assume_init() }))

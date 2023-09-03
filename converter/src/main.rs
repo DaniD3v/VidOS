@@ -18,7 +18,7 @@ use image::io::Reader as ImageReader;
 use image::{GenericImage, RgbImage};
 
 pub fn main() {
-    let image = ImageReader::open("./other/test.jpg")
+    let image = ImageReader::open("./videos/test.png")
         .unwrap()
         .decode()
         .unwrap()
@@ -27,7 +27,6 @@ pub fn main() {
     let chars = chunk::chunk_up(image);
 
     let mut img_buf = RgbImage::new(CHAR_WIDTH * VGA_WIDTH, VGA_HEIGHT * CHAR_HEIGHT);
-    println!("{}", chars[1].len());
     for (y, row) in chars.iter().enumerate() {
         for (x, char) in row.iter().enumerate() {
             let image = char.to_image();
@@ -37,7 +36,7 @@ pub fn main() {
         }
     }
 
-    img_buf.save("other/testing_output.png").unwrap();
+    img_buf.save("./videos/testing_output.png").unwrap();
 
     println!("Bye!");
 }
@@ -48,7 +47,7 @@ fn hashed_filename(path: &PathBuf) -> Result<OsString, io::Error> {
     Ok(format!("{:x}.data", hasher.finalize()).into())
 }
 
-fn get_unconverted_files() -> Result<Vec<(PathBuf, OsString)>, io::Error> {
+pub fn get_unconverted_files() -> Result<Vec<(PathBuf, OsString)>, io::Error> {
     let output_videos: Vec<OsString> = read_dir("./videos/out")?
         .map(|entry| Ok::<_, io::Error>(entry?.file_name()))
         .collect::<Result<_, _>>()?;
