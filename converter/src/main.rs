@@ -1,10 +1,11 @@
 #![feature(const_trait_impl)]
-
+#![feature(array_chunks)]
 mod char;
+mod chunk;
 mod constants;
 mod converter;
 mod other;
-mod chunk;
+//mod chunker;
 
 use sha2::{Digest, Sha256};
 use std::ffi::OsString;
@@ -12,20 +13,33 @@ use std::fs::{read_dir, File};
 use std::io;
 use std::path::PathBuf;
 
+use crate::constants::{CHAR_HEIGHT, CHAR_WIDTH, VGA_HEIGHT, VGA_WIDTH};
 use image::io::Reader as ImageReader;
-use image::GenericImageView;
-use crate::chunk::Chunk;
+use image::{GenericImage, RgbImage};
 
-fn main() {
-    let image = ImageReader::open("./other/test.jpg").unwrap().decode().unwrap().to_rgb8();
-    let view = image.view(0, 0, image.width(), image.height());
+pub fn main() {
+    let image = ImageReader::open("./other/test.jpg")
+        .unwrap()
+        .decode()
+        .unwrap()
+        .to_rgb8();
 
-    let chunk = Chunk { image: view };
-    let char = chunk.get_best_char();
-    char.to_image().save("./other/best_char.png").unwrap();
+    let chars = chunk::chunk_up(image);
 
-    let test_char = char::Char::new(1, 0, 7);
-    test_char.to_image().save("./other/test_char.png").unwrap();
+    let mut img_buf = RgbImage::new(CHAR_WIDTH * VGA_WIDTH, VGA_HEIGHT * CHAR_HEIGHT);
+    println!("{}", chars[1].len());
+    for (y, row) in chars.iter().enumerate() {
+        for (x, char) in row.iter().enumerate() {
+            let image = char.to_image();
+            img_buf
+                .copy_from(&image, x as u32 * CHAR_WIDTH, y as u32 * CHAR_HEIGHT)
+                .unwrap();
+        }
+    }
+
+    img_buf.save("other/testing_output.png").unwrap();
+
+    println!("Bye!");
 }
 
 fn hashed_filename(path: &PathBuf) -> Result<OsString, io::Error> {

@@ -1,6 +1,6 @@
-use std::error::Error;
 use image::io::Reader as ImageReader;
 use image::{GenericImageView, RgbImage, SubImage};
+use std::error::Error;
 
 use crate::constants::{CHARS_PER_LINE, CHAR_HEIGHT, CHAR_WIDTH};
 
