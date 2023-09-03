@@ -1,7 +1,10 @@
 pub const CHAR_WIDTH: u32 = 9;
 pub const CHAR_HEIGHT: u32 = 16;
 pub const CHARS_PER_LINE: u32 = 32;
-pub const CHARS_PER_COLUMN: u32 = 8;
+// pub const CHARS_PER_COLUMN: u32 = 8; // not needed rn
+
+pub const VGA_WIDTH: u32 = 80;
+pub const VGA_HEIGHT: u32 = 25;
 
 pub const FOREGROUND: [[u8; 3]; 16] = [
     [0, 0, 0],
