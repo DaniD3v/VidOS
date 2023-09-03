@@ -22,7 +22,7 @@ impl Chunk<'_> {
             .collect::<Vec<_>>();
 
         for possibility in CharID::new() {
-            let difference = self.difference(possibility, min_difference)
+            let difference = self.difference(&possibility, min_difference)
 
             match difference {
                 Some => {
