@@ -1,6 +1,7 @@
-#![feature(tuple_trait)]
-
+mod char;
+mod constants;
 mod converter;
+mod other;
 
 use sha2::{Digest, Sha256};
 use std::ffi::OsString;
@@ -29,7 +30,9 @@ fn get_unconverted_files() -> Result<Vec<(PathBuf, OsString)>, io::Error> {
         let path = entry?.path();
         let hash = hashed_filename(&path)?;
 
-        if !output_videos.contains(&hash) { input_videos.push((path, hash)) }
+        if !output_videos.contains(&hash) {
+            input_videos.push((path, hash))
+        }
     }
 
     Ok(input_videos)

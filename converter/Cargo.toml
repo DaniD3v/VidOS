@@ -4,5 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ffmpeg-next = "6.0.0"
+# gstreamer = "0.21.0" # this is stupidly overcomplicated so I'll add that later trust
+image = "0.24.1"
 sha2 = "0.10.7"
