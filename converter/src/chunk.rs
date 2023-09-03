@@ -21,38 +21,22 @@ impl Chunk<'_> {
             .map(|(_, _, color)| color)
             .collect::<Vec<_>>();
 
-        'possibility: for possibility in CharID::new() {
-            let difference = {
-                let mut difference = 0u32;
+        for possibility in CharID::new() {
+            let difference = difference(possibility, min_difference)
 
-                for y in 0..CHAR_HEIGHT {
-                    for x in 0..CHAR_WIDTH {
-                        let pixel = pixels[(x + y * CHAR_WIDTH) as usize];
-                        let other_pixel = possibility.get_color(x as u8, y as u8);
-
-                        for color in 0..3 {
-                            difference +=
-                                (pixel[color] as i32 - other_pixel[color] as i32).unsigned_abs();
-                        }
-                    }
-                    if difference > min_difference {
-                        continue 'possibility;
-                    }
+            match difference {
+                Some => {
+                    min_difference = difference;
+                    best_char = possibility;
                 }
-
-                difference
-            };
-
-            if difference < min_difference {
-                min_difference = difference;
-                best_char = possibility;
+                None => ()
             }
         }
 
         best_char
     }
 
-    fn difference(&self, other: &Char) -> u32 {
+    fn difference(&self, other: &Char, stop: u32) -> Option<u32> {
         let mut difference = 0u32;
 
         for y in 0..CHAR_HEIGHT {
@@ -63,10 +47,12 @@ impl Chunk<'_> {
                 for color in 0..3 {
                     difference += (pixel[color] as i32 - other_pixel[color] as i32).unsigned_abs();
                 }
+
+                if difference > stop: return None
             }
         }
 
-        difference
+        Some(difference)
     }
 }
 
