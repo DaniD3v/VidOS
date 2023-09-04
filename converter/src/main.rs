@@ -20,7 +20,7 @@ mod converter;
 mod other;
 
 pub fn main() {
-    let image = ImageReader::open("./videos/test.png")
+    let image = ImageReader::open("./videos/in/test3.webp")
         .unwrap()
         .decode()
         .unwrap()
@@ -37,7 +37,7 @@ pub fn main() {
     }
 
     println!("Took {:#?}", start.elapsed());
-    img_buf.save("./videos/testing_output.png").unwrap();
+    img_buf.save("./videos/out/testing_output.png").unwrap();
 }
 
 fn hashed_filename(path: &PathBuf) -> Result<OsString, io::Error> {
