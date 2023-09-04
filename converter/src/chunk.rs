@@ -1,4 +1,6 @@
 use image::{GenericImageView, RgbImage, SubImage};
+use image::imageops::resize;
+
 use crate::char::{Char, CharID};
 use crate::constants::{CHAR_HEIGHT, CHAR_WIDTH, VGA_HEIGHT, VGA_WIDTH};
 
@@ -49,8 +51,7 @@ pub struct ChunkIter {
 }
 impl ChunkIter {
     pub fn new(image: RgbImage) -> ChunkIter {
-        assert_eq!(image.width(), CHAR_WIDTH * VGA_WIDTH);
-        assert_eq!(image.height(), CHAR_HEIGHT * VGA_HEIGHT);
+        let image = resize(&image, VGA_WIDTH * CHAR_WIDTH, VGA_HEIGHT * CHAR_HEIGHT, image::imageops::Nearest).into();
 
         Self {
             image,
@@ -75,11 +76,10 @@ impl Iterator for ChunkIter {
         }
 
         let chunk = Chunk {
-            image: SubImage::new(&self.image, self.row, self.column, CHAR_WIDTH, CHAR_HEIGHT),
+            image: self.image.view(self.row, self.column, CHAR_WIDTH, CHAR_HEIGHT),
         };
 
-        let ret = Some((self.row, self.column, chunk.get_best_char()));
         self.row += CHAR_WIDTH;
-        ret
+        Some((self.row - CHAR_WIDTH, self.column, chunk.get_best_char()))
     }
  }
