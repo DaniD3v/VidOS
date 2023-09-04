@@ -11,12 +11,6 @@ impl Chunk<'_> {
         let mut min_difference = u32::MAX;
         let mut best_char = Char::new(0, 0, 0);
 
-        let pixels = self
-            .image
-            .pixels()
-            .map(|(_, _, color)| color)
-            .collect::<Vec<_>>();
-
         for possibility in CharID::new() {
             let difference = self.difference(&possibility, min_difference);
 

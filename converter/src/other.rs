@@ -4,6 +4,7 @@ use std::error::Error;
 
 use crate::constants::{CHARS_PER_LINE, CHAR_HEIGHT, CHAR_WIDTH};
 
+#[allow(dead_code)]
 fn generate_font() -> Result<(), Box<dyn Error>> {
     let codepage = ImageReader::open("./other/Codepage-737.png")?
         .decode()?

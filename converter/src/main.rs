@@ -18,7 +18,7 @@ use image::io::Reader as ImageReader;
 use image::{GenericImage, RgbImage};
 
 pub fn main() {
-    let image = ImageReader::open("./other/test.jpg")
+    let image = ImageReader::open("./videos/test.png")
         .unwrap()
         .decode()
         .unwrap()
@@ -36,7 +36,9 @@ pub fn main() {
 
     println!("Took {:#?}", start.elapsed());
 
-    img_buf.save("other/testing_output.png").unwrap();
+    img_buf.save("./videos/testing_output.png").unwrap();
+
+    println!("Bye!");
 }
 
 fn hashed_filename(path: &PathBuf) -> Result<OsString, io::Error> {
@@ -45,7 +47,7 @@ fn hashed_filename(path: &PathBuf) -> Result<OsString, io::Error> {
     Ok(format!("{:x}.data", hasher.finalize()).into())
 }
 
-fn get_unconverted_files() -> Result<Vec<(PathBuf, OsString)>, io::Error> {
+pub fn get_unconverted_files() -> Result<Vec<(PathBuf, OsString)>, io::Error> {
     let output_videos: Vec<OsString> = read_dir("./videos/out")?
         .map(|entry| Ok::<_, io::Error>(entry?.file_name()))
         .collect::<Result<_, _>>()?;
