@@ -50,7 +50,7 @@ impl Iterator for CharID {
     type Item = Char;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.id == u16::MAX {
+        if self.id == 2u16.pow(15) {
             return None;
         }
 

@@ -1,6 +1,4 @@
 use image::{GenericImageView, RgbImage, SubImage};
-use std::mem::MaybeUninit;
-
 use crate::char::{Char, CharID};
 use crate::constants::{CHAR_HEIGHT, CHAR_WIDTH, VGA_HEIGHT, VGA_WIDTH};
 
@@ -10,16 +8,14 @@ pub struct Chunk<'a> {
 
 impl Chunk<'_> {
     pub fn get_best_char(&self) -> Char {
-        // TODO: performance
-
         let mut min_difference = u32::MAX;
         let mut best_char = Char::new(0, 0, 0);
 
         for possibility in CharID::new() {
             let difference = self.difference(&possibility, min_difference);
 
-            if difference.is_some() {
-                min_difference = difference.unwrap();
+            if let Some(difference) = difference {
+                min_difference = difference;
                 best_char = possibility;
             }
         }
@@ -39,43 +35,51 @@ impl Chunk<'_> {
                     difference += (pixel[color] as i32 - other_pixel[color] as i32).unsigned_abs();
                 }
 
-                if difference > stop {return None}
+                if difference > stop { return None }
             }
         }
 
         Some(difference)
     }
 }
-
-// TODO: make this not awful
-pub fn chunk_up(image: RgbImage) -> Box<[[Char; VGA_WIDTH as usize]; VGA_HEIGHT as usize]> {
-    let width = image.width();
-    let height = image.height();
-    assert_eq!(width, CHAR_WIDTH * VGA_WIDTH);
-    assert_eq!(height, CHAR_HEIGHT * VGA_HEIGHT);
-
-    const UNINIT_CHAR: MaybeUninit<Char> = MaybeUninit::uninit();
-    const UNINIT_ROW: MaybeUninit<[Char; VGA_WIDTH as usize]> = MaybeUninit::uninit();
-
-    let mut chars = Box::new([UNINIT_ROW; VGA_HEIGHT as usize]);
-    let mut row = [UNINIT_CHAR; VGA_WIDTH as usize];
-    let mut column = 0;
-    let mut row_index = 0;
-    for y in (0..height).step_by(CHAR_HEIGHT as usize) {
-        for x in (0..width).step_by(CHAR_WIDTH as usize) {
-            let chunk = Chunk {
-                image: image.view(x, y, CHAR_WIDTH, CHAR_HEIGHT),
-            };
-            let best_char = chunk.get_best_char();
-            row[column] = MaybeUninit::new(best_char);
-            column += 1;
-        }
-        column = 0;
-        let row = std::mem::replace(&mut row, [UNINIT_CHAR; VGA_WIDTH as usize]);
-        chars[row_index] = MaybeUninit::new(row.map(|x| unsafe { x.assume_init() }));
-
-        row_index += 1;
-    }
-
-    Box::new(chars.map(|row| unsafe { row.assume_init() }))
+pub struct ChunkIter {
+    image: RgbImage,
+    column: u32,
+    row: u32,
 }
+impl ChunkIter {
+    pub fn new(image: RgbImage) -> ChunkIter {
+        assert_eq!(image.width(), CHAR_WIDTH * VGA_WIDTH);
+        assert_eq!(image.height(), CHAR_HEIGHT * VGA_HEIGHT);
+
+        Self {
+            image,
+            column: 0,
+            row: 0,
+        }
+    }
+}
+
+impl Iterator for ChunkIter {
+    type Item = (u32, u32, Char);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.row == VGA_WIDTH * CHAR_WIDTH {
+            self.column += CHAR_HEIGHT;
+
+            if self.column == VGA_HEIGHT * CHAR_HEIGHT {
+                return None;
+            }
+
+            self.row = 0;
+        }
+
+        let chunk = Chunk {
+            image: SubImage::new(&self.image, self.row, self.column, CHAR_WIDTH, CHAR_HEIGHT),
+        };
+
+        let ret = Some((self.row, self.column, chunk.get_best_char()));
+        self.row += CHAR_WIDTH;
+        ret
+    }
+ }

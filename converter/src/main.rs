@@ -1,21 +1,23 @@
 #![feature(const_trait_impl)]
 #![feature(array_chunks)]
+
+use std::ffi::OsString;
+use std::fs::{File, read_dir};
+use std::io;
+use std::path::PathBuf;
+
+use image::{GenericImage, RgbImage};
+use image::io::Reader as ImageReader;
+use sha2::{Digest, Sha256};
+
+use crate::chunk::ChunkIter;
+use crate::constants::{CHAR_HEIGHT, CHAR_WIDTH, VGA_HEIGHT, VGA_WIDTH};
+
 mod char;
 mod chunk;
 mod constants;
 mod converter;
 mod other;
-//mod chunker;
-
-use sha2::{Digest, Sha256};
-use std::ffi::OsString;
-use std::fs::{read_dir, File};
-use std::io;
-use std::path::PathBuf;
-
-use crate::constants::{CHAR_HEIGHT, CHAR_WIDTH, VGA_HEIGHT, VGA_WIDTH};
-use image::io::Reader as ImageReader;
-use image::{GenericImage, RgbImage};
 
 pub fn main() {
     let image = ImageReader::open("./videos/test.png")
@@ -24,21 +26,18 @@ pub fn main() {
         .unwrap()
         .to_rgb8();
 
-    let chars = chunk::chunk_up(image);
+    let start = std::time::Instant::now();
+    let chars = ChunkIter::new(image);
 
     let mut img_buf = RgbImage::new(CHAR_WIDTH * VGA_WIDTH, VGA_HEIGHT * CHAR_HEIGHT);
-    for (y, row) in chars.iter().enumerate() {
-        for (x, char) in row.iter().enumerate() {
-            let image = char.to_image();
-            img_buf
-                .copy_from(&image, x as u32 * CHAR_WIDTH, y as u32 * CHAR_HEIGHT)
-                .unwrap();
-        }
+
+    for (row, column, char) in chars {
+        let image = char.to_image();
+        img_buf.copy_from(&image, row, column).unwrap();
     }
 
+    println!("Took {:#?}", start.elapsed());
     img_buf.save("./videos/testing_output.png").unwrap();
-
-    println!("Bye!");
 }
 
 fn hashed_filename(path: &PathBuf) -> Result<OsString, io::Error> {
