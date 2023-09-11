@@ -6,7 +6,7 @@ use image::imageops::{FilterType, resize};
 use image::io::Reader;
 
 use crate::char::VGAChar;
-use crate::constants::{CHAR_HEIGHT, CHAR_WIDTH, DOWNSCALE_HEIGHT, DOWNSCALE_WIDTH, POSSIBLE_CHARS, VGA_CHAR_HEIGHT, VGA_CHAR_WIDTH, VGA_PIXEL_HEIGHT, VGA_PIXEL_WIDTH, VGACHAR_LOOKUP};
+use crate::constants::{CHAR_HEIGHT, CHAR_WIDTH, POSSIBLE_CHARS, VGA_CHAR_HEIGHT, VGA_CHAR_WIDTH, VGA_PIXEL_HEIGHT, VGA_PIXEL_WIDTH, VGACHAR_LOOKUP};
 
 pub struct Image {
     pub image: RgbImage
@@ -66,43 +66,44 @@ impl<'a> Chunk<'a> {
 
     pub fn get_best_char(&self) -> VGAChar {
         let mut min_difference = u32::MAX;
-        let mut best_char = VGAChar::new(0, 0, 0);
+        let mut best_char = &VGAChar::new(0, 0, 0);
 
         for possibility in 0..POSSIBLE_CHARS as u32 {
-            let difference = self.difference(possibility);
+            let difference = self.difference(possibility, min_difference);
 
-            if difference < min_difference {
-                min_difference = difference;
-                best_char = VGACHAR_LOOKUP[possibility as usize].0.clone();
+            match difference {
+                Some(difference) => {
+                    min_difference = difference;
+                    best_char = &VGACHAR_LOOKUP[possibility as usize].0;
+                }
+                None => ()
             }
         }
 
-        best_char
+        best_char.clone()
     }
 
-    fn difference(&self, char: u32) -> u32 {
-        let (_, render, downscale) = &VGACHAR_LOOKUP[char as usize];
-        let chunk_downscale = resize(&self.image.to_image(), DOWNSCALE_WIDTH, DOWNSCALE_HEIGHT, FilterType::Nearest);
+    fn difference(&self, char: u32, stop: u32) -> Option<u32> {
+        let other = &VGACHAR_LOOKUP[char as usize].1;
 
-        Self::raw_difference(&chunk_downscale, &downscale)
-            + Self::raw_difference(&self.image.to_image(), &render)
-    }
+        let bounds = self.image.bounds();
+        let bounds = (bounds.2, bounds.3);
+        assert_eq!(bounds, (other.bounds().2, other.bounds().3));
 
-    fn raw_difference(own: &RgbImage, other: &RgbImage) -> u32 {
-        assert_eq!(own.bounds(), other.bounds());
         let mut difference = 0u32;
 
-        for y in 0..own.bounds().3 {
-            for x in 0..own.bounds().2 {
-                let pixel = own.get_pixel(x, y);
+        for y in 0..bounds.1 {
+            for x in 0..bounds.0 {
+                let pixel = self.image.get_pixel(x, y);
                 let other_pixel = other.get_pixel(x, y);
 
                 for color in 0..3 {
                     difference += (pixel[color] as i32 - other_pixel[color] as i32).unsigned_abs();
                 }
             }
+            if difference > stop {return None;}
         }
 
-        difference
+        Some(difference)
     }
 }
