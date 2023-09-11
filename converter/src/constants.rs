@@ -9,8 +9,6 @@ use crate::char::VGAChar;
 
 pub const CHAR_WIDTH: u32 = 9;
 pub const CHAR_HEIGHT: u32 = 16;
-pub const DOWNSCALE_WIDTH: u32 = 4;
-pub const DOWNSCALE_HEIGHT: u32 = 8;
 pub const POSSIBLE_CHARS: usize = 256 * FOREGROUND.len() * BACKGROUND.len();
 
 pub const VGA_CHAR_WIDTH: usize = 80;
@@ -57,5 +55,4 @@ pub static CODEPAGE_737: LazyLock<RgbImage> = LazyLock::new(|| {
         .into_rgb8()
 });
 
-// [1] is the full rendered char, [2] is a downscaled version for a color comparison that is supposed to improve usage of the light grey characters.
-pub static VGACHAR_LOOKUP: LazyLock<[(VGAChar, RgbImage, RgbImage); POSSIBLE_CHARS]> = LazyLock::new(VGAChar::generate_lookup_table);
+pub static VGACHAR_LOOKUP: LazyLock<[(VGAChar, RgbImage); POSSIBLE_CHARS]> = LazyLock::new(VGAChar::generate_lookup_table);

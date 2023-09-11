@@ -1,9 +1,8 @@
 use std::time::SystemTime;
 
 use image::{GenericImageView, Rgb, RgbImage};
-use image::imageops::{FilterType, resize};
 
-use crate::constants::{BACKGROUND, CHAR_HEIGHT, CHAR_WIDTH, CODEPAGE_737, DOWNSCALE_HEIGHT, DOWNSCALE_WIDTH, FOREGROUND, POSSIBLE_CHARS};
+use crate::constants::{BACKGROUND, CHAR_HEIGHT, CHAR_WIDTH, CODEPAGE_737, FOREGROUND, POSSIBLE_CHARS};
 
 #[derive(Debug, Clone, Copy)]
 pub struct VGAChar {
@@ -27,9 +26,9 @@ impl VGAChar {
         }
     }
 
-    pub fn generate_lookup_table() -> [(Self, RgbImage, RgbImage); POSSIBLE_CHARS] {
+    pub fn generate_lookup_table() -> [(Self, RgbImage); POSSIBLE_CHARS] {
         let now = SystemTime::now();
-        let mut table: Vec<(Self, RgbImage, RgbImage)> = Vec::with_capacity(POSSIBLE_CHARS);
+        let mut table: Vec<(Self, RgbImage)> = Vec::with_capacity(POSSIBLE_CHARS);
 
 
         for char in 0..=255 {
@@ -37,9 +36,8 @@ impl VGAChar {
                 for background in 0..BACKGROUND.len() as u8 {
                     let char = Self::new(char, foreground, background);
                     let render = char.render();
-                    let downscale = resize(&render, DOWNSCALE_WIDTH, DOWNSCALE_HEIGHT, FilterType::Nearest);
-                    
-                    table.push((char, render, downscale))
+
+                    table.push((char, render))
                 }
             }
         }
