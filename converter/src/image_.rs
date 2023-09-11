@@ -6,18 +6,26 @@ use image::imageops::{FilterType, resize};
 use image::io::Reader;
 
 use crate::char::VGAChar;
-use crate::constants::{CHAR_HEIGHT, CHAR_WIDTH, POSSIBLE_CHARS, VGA_CHAR_HEIGHT, VGA_CHAR_WIDTH, VGA_PIXEL_HEIGHT, VGA_PIXEL_WIDTH, VGACHAR_LOOKUP};
+use crate::constants::*;
 
 pub struct Image {
-    pub image: RgbImage
+    pub image: RgbImage,
 }
 
 impl Image {
     pub fn new(path: &PathBuf) -> Result<Self, Box<dyn Error>> {
         let image = Reader::open(path)?.decode()?.into_rgb8();
 
-        // triangle (#2) is ~ 0.8 times slower than Nearest (#1) but way better and faster than the other ones.
-        Ok(Image { image: resize(&image, VGA_PIXEL_WIDTH, VGA_PIXEL_HEIGHT, FilterType::Triangle).into() })
+        // triangle (#2) is ~ 0.8 times slower than Nearest (#1) but but way better than Nearest and faster than the other ones.
+        Ok(Image {
+            image: resize(
+                &image,
+                VGA_PIXEL_WIDTH,
+                VGA_PIXEL_HEIGHT,
+                FilterType::Triangle,
+            )
+            .into(),
+        })
     }
 
     pub fn process_image(&self) -> ProcessedImage {
@@ -25,7 +33,13 @@ impl Image {
 
         for y in 0..VGA_CHAR_HEIGHT {
             for x in 0..VGA_CHAR_WIDTH {
-                chars[x][y] = Chunk::new(self.image.view(x as u32 * CHAR_WIDTH, y as u32 * CHAR_HEIGHT, CHAR_WIDTH, CHAR_HEIGHT)).get_best_char();
+                chars[x][y] = Chunk::new(self.image.view(
+                    x as u32 * CHAR_WIDTH,
+                    y as u32 * CHAR_HEIGHT,
+                    CHAR_WIDTH,
+                    CHAR_HEIGHT,
+                ))
+                .get_best_char();
             }
         }
 
@@ -34,7 +48,7 @@ impl Image {
 }
 
 pub struct ProcessedImage {
-    chars: [[VGAChar; VGA_CHAR_HEIGHT]; VGA_CHAR_WIDTH]
+    chars: [[VGAChar; VGA_CHAR_HEIGHT]; VGA_CHAR_WIDTH],
 }
 
 impl ProcessedImage {
@@ -45,10 +59,10 @@ impl ProcessedImage {
     pub fn render(&self) -> Result<RgbImage, image::error::ImageError> {
         let mut image_buf = RgbImage::new(VGA_PIXEL_WIDTH, VGA_PIXEL_HEIGHT);
 
-        for y in 0..VGA_CHAR_HEIGHT as u32{
-            for x in 0..VGA_CHAR_WIDTH as u32{
+        for y in 0..VGA_CHAR_HEIGHT as u32 {
+            for x in 0..VGA_CHAR_WIDTH as u32 {
                 let image = &VGACHAR_LOOKUP[self.chars[x as usize][y as usize].lookup_index()].1;
-                    image_buf.copy_from(image, x*CHAR_WIDTH, y*CHAR_HEIGHT)?;
+                image_buf.copy_from(image, x * CHAR_WIDTH, y * CHAR_HEIGHT)?;
             }
         }
 
@@ -76,7 +90,7 @@ impl<'a> Chunk<'a> {
                     min_difference = difference;
                     best_char = &VGACHAR_LOOKUP[possibility as usize].0;
                 }
-                None => ()
+                None => (),
             }
         }
 
@@ -101,7 +115,9 @@ impl<'a> Chunk<'a> {
                     difference += (pixel[color] as i32 - other_pixel[color] as i32).unsigned_abs();
                 }
             }
-            if difference > stop {return None;}
+            if difference > stop {
+                return None;
+            }
         }
 
         Some(difference)
