@@ -2,7 +2,7 @@ use std::time::SystemTime;
 
 use image::{GenericImageView, Rgb, RgbImage};
 
-use crate::constants::{BACKGROUND, CHAR_HEIGHT, CHAR_WIDTH, CODEPAGE_737, FOREGROUND, POSSIBLE_CHARS};
+use crate::constants::*;
 
 #[derive(Debug, Clone, Copy)]
 pub struct VGAChar {
@@ -10,8 +10,6 @@ pub struct VGAChar {
     foreground: u8,
     background: u8,
 }
-
-
 
 impl VGAChar {
     pub fn new(char: u8, foreground: u8, background: u8) -> Self {
@@ -30,7 +28,6 @@ impl VGAChar {
         let now = SystemTime::now();
         let mut table: Vec<(Self, RgbImage)> = Vec::with_capacity(POSSIBLE_CHARS);
 
-
         for char in 0..=255 {
             for foreground in 0..FOREGROUND.len() as u8 {
                 for background in 0..BACKGROUND.len() as u8 {
@@ -46,12 +43,15 @@ impl VGAChar {
         table.try_into().unwrap()
     }
 
+    #[allow(dead_code)] // TODO
     pub fn vga_format(&self) -> u16 {
         self.char as u16 | ((self.foreground as u16) << 8) | ((self.background as u16) << 12)
     }
 
     pub fn lookup_index(&self) -> usize {
-        self.char as usize * FOREGROUND.len() * BACKGROUND.len() + self.foreground as usize * BACKGROUND.len() + self.background as usize
+        self.char as usize * FOREGROUND.len() * BACKGROUND.len()
+            + self.foreground as usize * BACKGROUND.len()
+            + self.background as usize
     }
 
     fn render(&self) -> RgbImage {
@@ -63,7 +63,7 @@ impl VGAChar {
                 let color = match bitmap.get_pixel(x, y).0 {
                     [170, 170, 170] => FOREGROUND[self.foreground as usize],
                     [0, 0, 0] => BACKGROUND[self.background as usize],
-                    _ => panic!()
+                    _ => panic!(),
                 };
 
                 image.put_pixel(x, y, Rgb(color))
@@ -77,6 +77,8 @@ impl VGAChar {
         let x = self.char as u32 % 32; // there's 32 chars each row
         let y = self.char as u32 / 32;
 
-        CODEPAGE_737.view(x*CHAR_WIDTH, y*CHAR_HEIGHT, CHAR_WIDTH, CHAR_HEIGHT).to_image()
+        CODEPAGE_737
+            .view(x * CHAR_WIDTH, y * CHAR_HEIGHT, CHAR_WIDTH, CHAR_HEIGHT)
+            .to_image()
     }
 }

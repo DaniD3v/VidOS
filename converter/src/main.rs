@@ -12,7 +12,7 @@ mod image_;
 pub fn main() {
     let time = Instant::now();
 
-    let image = Image::new(&PathBuf::from("./videos/in/test1.png")).unwrap();
+    let image = Image::new(&PathBuf::from("./videos/in/test4.png")).unwrap();
     image.process_image().render().unwrap().save("./videos/out/result.png").unwrap();
 
     println!("{:?} elapsed.", time.elapsed());
