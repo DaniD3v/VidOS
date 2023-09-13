@@ -1,7 +1,7 @@
+use image::{GenericImageView, Rgb, RgbImage};
 use std::time::Instant;
 
-use image::{GenericImageView, Rgb, RgbImage};
-
+use crate::chunk::Chunk;
 use crate::constants::*;
 
 #[derive(Debug, Clone, Copy)]
@@ -32,15 +32,18 @@ impl VGAChar {
         }
     }
 
-    pub fn generate_lookup_table() -> [(Self, RgbImage); POSSIBLE_CHARS] {
-        let now = Instant::now();
-        let mut table: Vec<(Self, RgbImage)> = Vec::with_capacity(POSSIBLE_CHARS);
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+    pub fn generate_lookup_table() -> Box<[(Self, Chunk); POSSIBLE_CHARS]> {
+        let now = SystemTime::now();
+        let mut table = Vec::with_capacity(POSSIBLE_CHARS);
 
         for char in 0..=255 {
             for foreground in 0..FOREGROUND.len() as u8 {
                 for background in 0..BACKGROUND.len() as u8 {
                     let char = Self::new(char, foreground, background);
-                    let render = char.render();
+                    let render = Chunk {
+                        pixels: char.render(),
+                    };
 
                     table.push((char, render))
                 }
@@ -48,7 +51,34 @@ impl VGAChar {
         }
 
         println!("Generating lookup table took {:?}", now.elapsed());
-        table.try_into().unwrap()
+        table.into_boxed_slice().try_into().unwrap()
+    }
+
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    pub fn generate_lookup_table() -> Box<[(Self, Chunk); POSSIBLE_CHARS]> {
+        let now = Instant::now();
+        let mut table = Vec::with_capacity(POSSIBLE_CHARS);
+
+        for char in 0..=255 {
+            for foreground in 0..FOREGROUND.len() as u8 {
+                for background in 0..BACKGROUND.len() as u8 {
+                    let char = Self::new(char, foreground, background);
+                    let render = char.render();
+
+                    // Append a single row. So we can convert to __256i
+                    let render: [u128; 27] = unsafe { std::mem::transmute(render) };
+                    let mut render = render.to_vec();
+                    render.push(0u128);
+                    let render: [u128; 28] = render.try_into().unwrap();
+
+                    let render = unsafe { std::mem::transmute(render) };
+                    table.push((char, render));
+                }
+            }
+        }
+
+        println!("Generating lookup table took {:?}", now.elapsed());
+        table.into_boxed_slice().try_into().unwrap()
     }
 
     #[allow(dead_code)] // TODO
@@ -62,8 +92,8 @@ impl VGAChar {
             + self.background as usize
     }
 
-    fn render(&self) -> RgbImage {
-        let mut image = RgbImage::new(CHAR_WIDTH, CHAR_HEIGHT);
+    fn render(&self) -> CharGrid {
+        let mut image = [[Rgb::from([0, 0, 0]); CHAR_HEIGHT as usize]; CHAR_WIDTH as usize];
         let bitmap = self.get_bitmap();
 
         for x in 0..CHAR_WIDTH {
@@ -74,7 +104,7 @@ impl VGAChar {
                     _ => panic!(),
                 };
 
-                image.put_pixel(x, y, Rgb(color))
+                image[x as usize][y as usize] = Rgb(color);
             }
         }
 

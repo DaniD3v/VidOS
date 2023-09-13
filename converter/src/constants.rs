@@ -1,11 +1,14 @@
 use std::io::Cursor;
 use std::sync::LazyLock;
 
-use image::ImageFormat::Png;
 use image::io::Reader;
-use image::RgbImage;
+use image::ImageFormat::Png;
+use image::{Rgb, RgbImage};
 
 use crate::char::VGAChar;
+use crate::chunk::Chunk;
+
+pub type CharGrid = [[Rgb<u8>; CHAR_HEIGHT as usize]; CHAR_WIDTH as usize];
 
 pub const CHAR_WIDTH: u32 = 9;
 pub const CHAR_HEIGHT: u32 = 16;
@@ -55,4 +58,5 @@ pub static CODEPAGE_737: LazyLock<RgbImage> = LazyLock::new(|| {
         .into_rgb8()
 });
 
-pub static VGACHAR_LOOKUP: LazyLock<[(VGAChar, RgbImage); POSSIBLE_CHARS]> = LazyLock::new(VGAChar::generate_lookup_table);
+pub static VGACHAR_LOOKUP: LazyLock<Box<[(VGAChar, Chunk); POSSIBLE_CHARS]>> =
+    LazyLock::new(VGAChar::generate_lookup_table);

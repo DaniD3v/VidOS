@@ -3,9 +3,10 @@ use std::path::Path;
 
 use image::imageops::{resize, FilterType};
 use image::io::Reader;
-use image::{GenericImage, GenericImageView, RgbImage, SubImage};
+use image::{GenericImage, GenericImageView, RgbImage};
 
 use crate::char::VGAChar;
+use crate::chunk::Chunk;
 use crate::constants::*;
 
 pub struct Image {
@@ -23,8 +24,7 @@ impl Image {
                 VGA_PIXEL_WIDTH,
                 VGA_PIXEL_HEIGHT,
                 FilterType::Triangle,
-            )
-            .into(),
+            ),
         })
     }
 
@@ -63,64 +63,10 @@ impl ProcessedImage {
         for y in 0..VGA_CHAR_HEIGHT as u32 {
             for x in 0..VGA_CHAR_WIDTH as u32 {
                 let image = &VGACHAR_LOOKUP[self.chars[x as usize][y as usize].lookup_index()].1;
-                image_buf.copy_from(image, x * CHAR_WIDTH, y * CHAR_HEIGHT)?;
+                image_buf.copy_from(&image.to_image(), x * CHAR_WIDTH, y * CHAR_HEIGHT)?;
             }
         }
 
         Ok(image_buf)
-    }
-}
-struct Chunk<'a> {
-    image: SubImage<&'a RgbImage>,
-}
-
-impl<'a> Chunk<'a> {
-    pub fn new(image: SubImage<&'a RgbImage>) -> Self {
-        Chunk { image }
-    }
-
-    pub fn get_best_char(&self) -> VGAChar {
-        let mut min_difference = u32::MAX;
-        let mut best_char = &VGAChar::uninit();
-
-        for possibility in 0..POSSIBLE_CHARS as u32 {
-            let difference = self.difference(possibility, min_difference);
-
-            match difference {
-                Some(difference) => {
-                    min_difference = difference;
-                    best_char = &VGACHAR_LOOKUP[possibility as usize].0;
-                }
-                None => (),
-            }
-        }
-
-        best_char.clone()
-    }
-
-    fn difference(&self, char: u32, stop: u32) -> Option<u32> {
-        let other = &VGACHAR_LOOKUP[char as usize].1;
-
-        let bounds = self.image.bounds();
-        let bounds = (bounds.2, bounds.3);
-        assert_eq!(bounds, (other.bounds().2, other.bounds().3));
-
-        let mut difference = 0u32;
-
-        for y in 0..bounds.1 {
-            for x in 0..bounds.0 {
-                let pixel = self.image.get_pixel(x, y);
-                let other_pixel = other.get_pixel(x, y);
-
-                for color in 0..3 {
-                    difference += (pixel[color] as i32 - other_pixel[color] as i32).unsigned_abs();
-                }
-            }
-            if difference > stop {
-                return None;
-            }
-        }
-
-        Some(difference)
     }
 }
