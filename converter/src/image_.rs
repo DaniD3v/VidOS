@@ -1,9 +1,9 @@
 use std::error::Error;
-use std::path::PathBuf;
+use std::path::Path;
 
-use image::{GenericImage, GenericImageView, RgbImage, SubImage};
-use image::imageops::{FilterType, resize};
+use image::imageops::{resize, FilterType};
 use image::io::Reader;
+use image::{GenericImage, GenericImageView, RgbImage, SubImage};
 
 use crate::char::VGAChar;
 use crate::constants::*;
@@ -13,7 +13,7 @@ pub struct Image {
 }
 
 impl Image {
-    pub fn new(path: &PathBuf) -> Result<Self, Box<dyn Error>> {
+    pub fn new(path: &Path) -> Result<Self, Box<dyn Error>> {
         let image = Reader::open(path)?.decode()?.into_rgb8();
 
         // triangle (#2) is ~ 0.8 times slower than Nearest (#1) but but way better than Nearest and faster than the other ones.
@@ -28,8 +28,9 @@ impl Image {
         })
     }
 
+    // no threading here because doing it at the thread/frame stage is much more efficient
     pub fn process_image(&self) -> ProcessedImage {
-        let mut chars = [[VGAChar::new(0, 0, 0); VGA_CHAR_HEIGHT]; VGA_CHAR_WIDTH];
+        let mut chars = [[VGAChar::uninit(); VGA_CHAR_HEIGHT]; VGA_CHAR_WIDTH];
 
         for y in 0..VGA_CHAR_HEIGHT {
             for x in 0..VGA_CHAR_WIDTH {
@@ -80,7 +81,7 @@ impl<'a> Chunk<'a> {
 
     pub fn get_best_char(&self) -> VGAChar {
         let mut min_difference = u32::MAX;
-        let mut best_char = &VGAChar::new(0, 0, 0);
+        let mut best_char = &VGAChar::uninit();
 
         for possibility in 0..POSSIBLE_CHARS as u32 {
             let difference = self.difference(possibility, min_difference);
