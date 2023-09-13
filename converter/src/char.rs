@@ -1,4 +1,4 @@
-use std::time::SystemTime;
+use std::time::Instant;
 
 use image::{GenericImageView, Rgb, RgbImage};
 
@@ -33,7 +33,7 @@ impl VGAChar {
     }
 
     pub fn generate_lookup_table() -> [(Self, RgbImage); POSSIBLE_CHARS] {
-        let now = SystemTime::now();
+        let now = Instant::now();
         let mut table: Vec<(Self, RgbImage)> = Vec::with_capacity(POSSIBLE_CHARS);
 
         for char in 0..=255 {
@@ -47,7 +47,7 @@ impl VGAChar {
             }
         }
 
-        println!("Generating lookup table took {:?}", now.elapsed().unwrap());
+        println!("Generating lookup table took {:?}", now.elapsed());
         table.try_into().unwrap()
     }
 
