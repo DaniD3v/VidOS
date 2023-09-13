@@ -24,6 +24,14 @@ impl VGAChar {
         }
     }
 
+    pub fn uninit() -> Self {
+        Self {
+            char: 0,
+            foreground: 0,
+            background: 0,
+        }
+    }
+
     pub fn generate_lookup_table() -> [(Self, RgbImage); POSSIBLE_CHARS] {
         let now = SystemTime::now();
         let mut table: Vec<(Self, RgbImage)> = Vec::with_capacity(POSSIBLE_CHARS);

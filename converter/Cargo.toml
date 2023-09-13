@@ -4,6 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# gstreamer = "0.21.0" # this is stupidly overcomplicated so I'll add that later trust
+vid2img = "0.1.1"
 image = "0.24.1"
-sha2 = "0.10.7"
