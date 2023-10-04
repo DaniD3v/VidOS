@@ -1,4 +1,3 @@
-name: Image Comparison
 on: [push, pull_request]
 
 jobs:
@@ -23,3 +22,11 @@ jobs:
         run: |
           git diff --exit-code
           exit $?
+          
+  clippy-check:
+    runs-on: ubuntu-latest
+  
+    steps:
+        - name: clippy-check
+          uses: actions-rs/clippy-check@v1.0.7
+            
