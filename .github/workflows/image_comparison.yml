@@ -1,0 +1,25 @@
+name: Image Comparison
+on: [push, pull_request]
+
+jobs:
+  image_comparison:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          default: true
+
+      - name: Run project
+        working-directory: ./converter
+        run: |
+          cargo run --package vid_converter --bin vid_converter --release
+          exit $?
+      - name: Compare Images
+        run: |
+          git diff --exit-code
+          exit $?
