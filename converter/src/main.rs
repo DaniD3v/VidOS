@@ -1,24 +1,39 @@
 #![feature(lazy_cell)]
+#![feature(path_file_prefix)]
 
-use std::path::Path;
+pub mod constants;
+pub mod image;
+pub mod char;
+
+use std::error::Error;
+use std::path::PathBuf;
+use std::fs::read_dir;
 use std::time::Instant;
 
-use image_::Image;
+use crate::image::Image;
 
-mod char;
-mod constants;
-mod image_;
+pub fn main() -> Result<(), Box<dyn Error>> {
+    for file in read_dir("./examples/images/in")? {
+        let path = file?.path();
+        let image = Image::new(&path)?;
 
-pub fn main() {
-    let time = Instant::now();
+        println!("Processing image {:?} -> {}", path, output_path(&path));
 
-    let image = Image::new(&Path::new("./videos/in/incredible.jpg")).unwrap();
-    image
-        .process_image()
-        .render()
-        .unwrap()
-        .save("./videos/out/result.png")
-        .unwrap();
+        let time = Instant::now();
 
-    println!("{:?} elapsed.", time.elapsed());
+        image.process_image()
+            .render()?
+            .save(output_path(&path))?;
+
+        println!("{:?} elapsed.", time.elapsed());
+    }
+
+    Ok(())
+}
+
+fn output_path(path: &PathBuf) -> String {
+    let images_folder = path.parent().unwrap().parent().unwrap().to_str().unwrap();
+    let filename = path.file_prefix().unwrap().to_str().unwrap();
+
+    format!("{}/out/{}.png", images_folder, filename)
 }

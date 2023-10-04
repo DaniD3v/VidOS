@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::path::Path;
+use std::path::PathBuf;
 
 use image::imageops::{resize, FilterType};
 use image::io::Reader;
@@ -13,7 +13,7 @@ pub struct Image {
 }
 
 impl Image {
-    pub fn new(path: &Path) -> Result<Self, Box<dyn Error>> {
+    pub fn new(path: &PathBuf) -> Result<Self, Box<dyn Error>> {
         let image = Reader::open(path)?.decode()?.into_rgb8();
 
         // triangle (#2) is ~ 0.8 times slower than Nearest (#1) but but way better than Nearest and faster than the other ones.
