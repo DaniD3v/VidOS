@@ -35,13 +35,13 @@ jobs:
             profile: minimal
             default: true
     
-        - name: clippy-check
+        - name: clippy-check-converter
           uses: actions-rs/clippy-check@v1.0.7
           with:
             args: --manifest-path ./converter/Cargo.toml
             token: ${{ secrets.GITHUB_TOKEN }}
 
-        - name: clippy-check
+        - name: clippy-check-os
           uses: actions-rs/clippy-check@v1.0.7
           with:
             args: --manifest-path ./os/Cargo.toml
