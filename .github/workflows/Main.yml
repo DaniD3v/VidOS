@@ -23,7 +23,7 @@ jobs:
           git diff --exit-code
           exit $?
           
-  clippy-check:
+  clippy-check-converter:
     runs-on: ubuntu-latest
   
     steps:
@@ -32,4 +32,17 @@ jobs:
         - name: clippy-check
           uses: actions-rs/clippy-check@v1.0.7
           with:
+            args: --manifest-path ./converter/Cargo.toml
+            token: ${{ secrets.GITHUB_TOKEN }}
+
+  clippy-check-os:
+    runs-on: ubuntu-latest
+  
+    steps:
+        - uses: actions/checkout@v4
+    
+        - name: clippy-check
+          uses: actions-rs/clippy-check@v1.0.7
+          with:
+            args: --manifest-path ./os/Cargo.toml
             token: ${{ secrets.GITHUB_TOKEN }}
