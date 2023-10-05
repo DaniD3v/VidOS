@@ -27,6 +27,7 @@ jobs:
   clippy:
     runs-on: ubuntu-latest
     permissions:
+      checks: read
       contents: read
       pull-requests: write
       statuses: read
