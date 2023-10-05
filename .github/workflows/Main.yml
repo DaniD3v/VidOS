@@ -34,7 +34,6 @@ jobs:
           with:
             toolchain: nightly
             components: clippy
-            profile: minimal
             default: true
     
         - name: clippy-check-converter
