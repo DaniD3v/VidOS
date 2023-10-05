@@ -18,6 +18,7 @@ jobs:
         run: |
           cargo run --package vid_converter --bin vid_converter --release
           exit $?
+          
       - name: Compare Images
         run: |
           git diff --exit-code
@@ -26,7 +27,6 @@ jobs:
   clippy:
     runs-on: ubuntu-latest
     permissions:
-      checks: write
       contents: read
       pull-requests: write
       statuses: read
@@ -38,7 +38,7 @@ jobs:
         - uses: actions-rs/toolchain@v1
           with:
             toolchain: nightly
-            components: clippy
+            components: clippy, rust-src
             profile: minimal
             default: true
     
@@ -47,9 +47,6 @@ jobs:
           with:
             args: --manifest-path ./converter/Cargo.toml
             token: ${{ secrets.GITHUB_TOKEN }}
-
-        - name: download toolchain-src
-          run: rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
 
         - name: clippy-check-os
           uses: actions-rs/clippy-check@v1.0.7
