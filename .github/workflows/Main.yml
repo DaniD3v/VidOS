@@ -23,9 +23,10 @@ jobs:
           git diff --exit-code
           exit $?
           
-  clippy-check:
+  clippy:
     runs-on: ubuntu-latest
-    permissions: write-all
+    permissions:
+      pull-requests: write
   
     steps:
         - uses: actions/checkout@v4
