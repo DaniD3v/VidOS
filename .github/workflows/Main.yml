@@ -1,0 +1,55 @@
+on: push
+
+jobs:
+  image_comparison:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          default: true
+
+      - name: Run project
+        working-directory: ./converter
+        run: |
+          cargo run --package vid_converter --bin vid_converter --release
+          exit $?
+          
+      - name: Compare Images
+        run: |
+          git diff --exit-code
+          exit $?
+          
+  clippy:
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      
+    steps:
+        - uses: actions/checkout@v4
+
+        - uses: actions-rs/toolchain@v1
+          with:
+            toolchain: nightly
+            components: clippy, rust-src
+            profile: minimal
+            default: true
+    
+        - name: clippy-check-converter
+          uses: actions-rs/clippy-check@v1.0.7
+          with:
+            args: --manifest-path ./converter/Cargo.toml
+            token: ${{ secrets.GITHUB_TOKEN }}
+            name: clippy-converter
+
+        - name: clippy-check-os
+          uses: actions-rs/clippy-check@v1.0.7
+          with:
+            args: --manifest-path ./os/Cargo.toml --target ./os/x86_64-unknown-vid_os.json -Zbuild-std
+            token: ${{ secrets.GITHUB_TOKEN }}
+            name: clippy-os
+            
