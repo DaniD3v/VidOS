@@ -46,6 +46,6 @@ jobs:
         - name: clippy-check-os
           uses: actions-rs/clippy-check@v1.0.7
           with:
-            args: --manifest-path ./os/Cargo.toml
+            args: --manifest-path ./os/Cargo.toml --target ./os/x86_64-unknown-vid_os.json -Zbuild-std
             token: ${{ secrets.GITHUB_TOKEN }}
             
