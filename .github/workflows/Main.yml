@@ -32,6 +32,7 @@ jobs:
         - name: clippy-check
           uses: actions-rs/clippy-check@v1.0.7
           with:
+            toolchain: nightly
             args: --manifest-path ./converter/Cargo.toml
             token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -44,5 +45,6 @@ jobs:
         - name: clippy-check
           uses: actions-rs/clippy-check@v1.0.7
           with:
+            toolchain: nightly
             args: --manifest-path ./os/Cargo.toml
             token: ${{ secrets.GITHUB_TOKEN }}
