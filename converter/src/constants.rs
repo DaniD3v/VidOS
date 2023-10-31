@@ -17,6 +17,8 @@ pub const VGA_CHAR_HEIGHT: usize = 25;
 pub const VGA_PIXEL_WIDTH: u32 = VGA_CHAR_WIDTH as u32 * CHAR_WIDTH;
 pub const VGA_PIXEL_HEIGHT: u32 = VGA_CHAR_HEIGHT as u32 * CHAR_HEIGHT;
 
+pub const VGA_WORD_SIZE: usize = VGA_CHAR_WIDTH * VGA_CHAR_HEIGHT;
+
 pub const FOREGROUND: [[u8; 3]; 16] = [
     [0, 0, 0],
     [0, 0, 170],

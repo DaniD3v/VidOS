@@ -6,9 +6,11 @@ pub mod image;
 pub mod char;
 
 use std::error::Error;
-use std::path::PathBuf;
-use std::fs::read_dir;
 use std::time::Instant;
+use std::fs::read_dir;
+use std::path::Path;
+use std::io::Write;
+use std::fs;
 
 use crate::image::Image;
 
@@ -17,23 +19,28 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         let path = file?.path();
         let image = Image::new(&path)?;
 
-        println!("Processing image {:?} -> {}", path, output_path(&path));
+        println!("Processing image {:?} -> {}", path, dir_path(&path, "out", "png"));
 
         let time = Instant::now();
-
-        image.process_image()
-            .render()?
-            .save(output_path(&path))?;
-
+        let image = image.process_image();
         println!("{:?} elapsed.", time.elapsed());
+
+        image
+            .render()?
+            .save(dir_path(&path, "out", "png"))?;
+
+        fs::OpenOptions::new()
+            .write(true).create(true)
+            .open(dir_path(&path, "ser", "bin"))?
+            .write_all(&image.serialize())?;
     }
 
     Ok(())
 }
 
-fn output_path(path: &PathBuf) -> String {
+fn dir_path(path: &Path, directory: &str, file_type: &str) -> String {
     let images_folder = path.parent().unwrap().parent().unwrap().to_str().unwrap();
-    let filename = path.file_prefix().unwrap().to_str().unwrap();
+    let file_name = path.file_prefix().unwrap().to_str().unwrap();
 
-    format!("{}/out/{}.png", images_folder, filename)
+    format!("{images_folder}/{directory}/{file_name}.{file_type}").to_string()
 }

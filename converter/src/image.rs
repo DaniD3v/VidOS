@@ -24,7 +24,6 @@ impl Image {
                 VGA_PIXEL_HEIGHT,
                 FilterType::Triangle,
             )
-            .into(),
         })
     }
 
@@ -33,14 +32,13 @@ impl Image {
         let mut chars = [[VGAChar::uninit(); VGA_CHAR_HEIGHT]; VGA_CHAR_WIDTH];
 
         for y in 0..VGA_CHAR_HEIGHT {
-            for x in 0..VGA_CHAR_WIDTH {
-                chars[x][y] = Chunk::new(self.image.view(
+            for (x, column) in chars.iter_mut().enumerate().take(VGA_CHAR_WIDTH) {
+                column[y] = Chunk::new(self.image.view(
                     x as u32 * CHAR_WIDTH,
                     y as u32 * CHAR_HEIGHT,
                     CHAR_WIDTH,
                     CHAR_HEIGHT,
-                ))
-                .get_best_char();
+                )).get_best_char();
             }
         }
 
@@ -69,7 +67,17 @@ impl ProcessedImage {
 
         Ok(image_buf)
     }
+
+    pub fn serialize(&self) -> [u8; VGA_WORD_SIZE*2] {
+        unsafe { std::mem::transmute::<[u16; VGA_WORD_SIZE], _>(
+            self.chars.iter().flatten()
+                .map(VGAChar::vga_format)
+                .collect::<Vec<u16>>()
+                .try_into().unwrap()
+        ) }
+    }
 }
+
 struct Chunk<'a> {
     image: SubImage<&'a RgbImage>,
 }
@@ -86,16 +94,13 @@ impl<'a> Chunk<'a> {
         for possibility in 0..POSSIBLE_CHARS as u32 {
             let difference = self.difference(possibility, min_difference);
 
-            match difference {
-                Some(difference) => {
-                    min_difference = difference;
-                    best_char = &VGACHAR_LOOKUP[possibility as usize].0;
-                }
-                None => (),
+            if let Some(difference) = difference {
+                min_difference = difference;
+                best_char = &VGACHAR_LOOKUP[possibility as usize].0;
             }
         }
 
-        best_char.clone()
+        *best_char
     }
 
     fn difference(&self, char: u32, stop: u32) -> Option<u32> {
