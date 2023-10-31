@@ -29,11 +29,11 @@ impl Image {
 
     // no threading here because doing it at the thread/frame stage is much more efficient
     pub fn process_image(&self) -> ProcessedImage {
-        let mut chars = [[VGAChar::uninit(); VGA_CHAR_HEIGHT]; VGA_CHAR_WIDTH];
+        let mut chars = [[VGAChar::uninit(); VGA_CHAR_WIDTH]; VGA_CHAR_HEIGHT];
 
-        for y in 0..VGA_CHAR_HEIGHT {
-            for (x, column) in chars.iter_mut().enumerate().take(VGA_CHAR_WIDTH) {
-                column[y] = Chunk::new(self.image.view(
+        for x in 0..VGA_CHAR_WIDTH {
+            for (y, row) in chars.iter_mut().enumerate().take(VGA_CHAR_HEIGHT) {
+                row[x] = Chunk::new(self.image.view(
                     x as u32 * CHAR_WIDTH,
                     y as u32 * CHAR_HEIGHT,
                     CHAR_WIDTH,
@@ -47,20 +47,20 @@ impl Image {
 }
 
 pub struct ProcessedImage {
-    chars: [[VGAChar; VGA_CHAR_HEIGHT]; VGA_CHAR_WIDTH],
+    chars: [[VGAChar; VGA_CHAR_WIDTH]; VGA_CHAR_HEIGHT],
 }
 
 impl ProcessedImage {
-    pub fn new(chars: [[VGAChar; VGA_CHAR_HEIGHT]; VGA_CHAR_WIDTH]) -> Self {
+    pub fn new(chars: [[VGAChar; VGA_CHAR_WIDTH]; VGA_CHAR_HEIGHT]) -> Self {
         ProcessedImage { chars }
     }
 
     pub fn render(&self) -> Result<RgbImage, image::error::ImageError> {
         let mut image_buf = RgbImage::new(VGA_PIXEL_WIDTH, VGA_PIXEL_HEIGHT);
 
-        for y in 0..VGA_CHAR_HEIGHT as u32 {
-            for x in 0..VGA_CHAR_WIDTH as u32 {
-                let image = &VGACHAR_LOOKUP[self.chars[x as usize][y as usize].lookup_index()].1;
+        for x in 0..VGA_CHAR_WIDTH as u32 {
+            for y in 0..VGA_CHAR_HEIGHT as u32 {
+                let image = &VGACHAR_LOOKUP[self.chars[y as usize][x as usize].lookup_index()].1;
                 image_buf.copy_from(image, x * CHAR_WIDTH, y * CHAR_HEIGHT)?;
             }
         }
