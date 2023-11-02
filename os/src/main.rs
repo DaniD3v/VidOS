@@ -5,8 +5,8 @@ use core::hint::black_box;
 use core::mem::transmute;
 
 const VGA_BUFFER: *mut u8 = 0xb8000 as *mut u8;
-const SECOND: u32 = 340000000; // TODO this is so bad pls make a hw-clock implementation
-const FRAMES: usize = 205;
+const SECOND: u32 = 290000000; // TODO this is so bad pls make a hw-clock implementation
+const FRAMES: usize = 6572;
 
 static VIDEO: &[[u8; 4000]; FRAMES] = unsafe { transmute(include_bytes!("../../converter/examples/videos/ser/BadApple.bin")) };
 

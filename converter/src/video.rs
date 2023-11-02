@@ -4,7 +4,8 @@ use std::path::Path;
 use std::process::Command;
 
 pub fn extract_frames(path: &Path) -> Result<(), Box<dyn Error>> {
-    fs::remove_dir_all("/tmp/VidOS")?;
+
+    if fs::try_exists("/tmp/VidOS")? { fs::remove_dir_all("/tmp/VidOS")?; }
     fs::create_dir("/tmp/VidOS")?;
 
     Command::new("ffmpeg")

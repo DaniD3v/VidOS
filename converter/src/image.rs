@@ -78,7 +78,7 @@ impl ProcessedImage {
     }
 }
 
-struct Chunk<'a> {
+struct Chunk<'a> { // TODO impl Hash -> cache frequent chunks
     image: SubImage<&'a RgbImage>,
 }
 

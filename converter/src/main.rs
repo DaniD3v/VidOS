@@ -1,5 +1,6 @@
 #![feature(lazy_cell)]
 #![feature(path_file_prefix)]
+#![feature(fs_try_exists)]
 
 pub mod constants;
 pub mod image;
@@ -17,15 +18,20 @@ use crate::image::Image;
 use crate::video::extract_frames;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
-    for file in read_dir("./examples/images/in")? {
-        let path = file?.path();
-        process_image(&path)?;
-    }
+    // for file in read_dir("./examples/images/in")? {
+    //     let path = file?.path();
+    //     process_image(&path)?;
+    // }
 
     for file in read_dir("./examples/videos/in")? {
         let path = file?.path();
+        if let Some(name) = path.file_name() {
+            if name == "BadApple.mp4" { continue; }
+            println!("Processing {name:?}.");
+        }
 
         extract_frames(&path)?;
+        println!("extracted frames");
 
         for file in read_dir("/tmp/VidOS")? {
             let image_path = file?.path();
