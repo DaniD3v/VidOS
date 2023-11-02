@@ -8,16 +8,18 @@ pub mod char;
 mod video;
 
 use std::error::Error;
-use std::time::Instant;
-use std::fs::read_dir;
-use std::path::{Path, PathBuf};
-use std::io::Write;
 use std::fs;
+use std::fs::read_dir;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 use crate::image::Image;
-use crate::video::extract_frames;
+use crate::video::for_each_frame;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
+    ffmpeg::init()?;
+
     // for file in read_dir("./examples/images/in")? {
     //     let path = file?.path();
     //     process_image(&path)?;
@@ -30,20 +32,21 @@ pub fn main() -> Result<(), Box<dyn Error>> {
             println!("Processing {name:?}.");
         }
 
-        extract_frames(&path)?;
-        println!("extracted frames");
 
-        for file in read_dir("/tmp/VidOS")? {
-            let image_path = file?.path();
+        let mut i = 0;
+        for_each_frame(&path, &mut |frame| {
+            i += 1;
+            println!("Processing Frame {i}.");
 
-            if let Some(name) = image_path.file_name() { println!("Processing {name:?}."); }
-            let image = Image::new(&image_path)?.process_image();
+            let image = Image::from(frame).process_image();
 
             fs::OpenOptions::new()
                 .append(true).create(true)
                 .open(dir_path(&path, "ser", "bin"))?
                 .write_all(&image.serialize())?;
-        }
+
+            Ok(())
+        })?;
     }
 
     Ok(())

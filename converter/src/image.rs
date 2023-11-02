@@ -46,6 +46,19 @@ impl Image {
     }
 }
 
+impl From<RgbImage> for Image {
+    fn from(image: RgbImage) -> Self {
+        Self {
+            image: resize(
+                &image,
+                VGA_PIXEL_WIDTH,
+                VGA_PIXEL_HEIGHT,
+                FilterType::Triangle,
+            )
+        }
+    }
+}
+
 pub struct ProcessedImage {
     chars: [[VGAChar; VGA_CHAR_WIDTH]; VGA_CHAR_HEIGHT],
 }
