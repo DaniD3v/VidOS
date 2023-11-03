@@ -32,9 +32,9 @@ impl VGAChar {
         }
     }
 
-    pub fn generate_lookup_table() -> [(Self, RgbImage); POSSIBLE_CHARS] {
+    pub fn generate_lookup_table() -> Box<[(Self, RgbImage)]> {
         let now = Instant::now();
-        let mut table: Vec<(Self, RgbImage)> = Vec::with_capacity(POSSIBLE_CHARS);
+        let mut table = Vec::with_capacity(POSSIBLE_CHARS);
 
         for char in 0..=255 {
             for foreground in 0..FOREGROUND.len() as u8 {
@@ -42,13 +42,13 @@ impl VGAChar {
                     let char = Self::new(char, foreground, background);
                     let render = char.render();
 
-                    table.push((char, render))
+                    table.push((char, render));
                 }
             }
         }
 
         println!("Generating lookup table took {:?}", now.elapsed());
-        table.try_into().unwrap()
+        table.into_boxed_slice()
     }
 
     #[allow(dead_code)] // TODO

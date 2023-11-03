@@ -13,8 +13,9 @@ use std::fs::read_dir;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
+use ::image::RgbImage;
 
-use crate::image::Image;
+use crate::image::{Image, ProcessedImage};
 use crate::video::for_each_frame;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
@@ -28,24 +29,28 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     for file in read_dir("./examples/videos/in")? {
         let path = file?.path();
         if let Some(name) = path.file_name() {
-            if name == "BadApple.mp4" { continue; }
+            //if name == "BadApple.mp4" { continue; }
             println!("Processing {name:?}.");
         }
 
+        fn process_frame(frame: RgbImage) -> ProcessedImage {
+            println!("Processing Frame.");
 
-        let mut i = 0;
-        for_each_frame(&path, &mut |frame| {
-            i += 1;
-            println!("Processing Frame {i}.");
+            Image::from(frame).process_image()
+        }
 
-            let image = Image::from(frame).process_image();
+        for_each_frame(&path, &process_frame, &|chunk| {
+            let mut bytes = vec![];
+            for processed in &chunk {
+                bytes.extend_from_slice(&processed.serialize());
+            }
+
+            println!("Wrote chunk of {} Frames!", chunk.len());
 
             fs::OpenOptions::new()
                 .append(true).create(true)
-                .open(dir_path(&path, "ser", "bin"))?
-                .write_all(&image.serialize())?;
-
-            Ok(())
+                .open(dir_path(&path, "ser", "bin")).unwrap()
+                .write_all(&bytes).unwrap();
         })?;
     }
 

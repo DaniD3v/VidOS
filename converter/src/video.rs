@@ -5,8 +5,11 @@ use ffmpeg::software::scaling::{context::Context, flag::Flags};
 use ffmpeg::util::frame::video::Video;
 use std::path::Path;
 use image::RgbImage;
+use rayon::prelude::*;
 
-pub fn for_each_frame(path: &Path, run: &mut dyn FnMut(RgbImage) -> Result<(), Box<dyn Error>>) -> Result<(), Box<dyn Error>> {
+const FRAME_CHUNKS: usize = 128;
+
+pub fn for_each_frame<T: Send>(path: &Path, run: &(dyn Fn(RgbImage) -> T + Send + Sync), chunk_consumer: &dyn Fn(Vec<T>)) -> Result<(), Box<dyn Error>> {
     let mut ictx = input(&path)?;
 
     let input = ictx
@@ -28,6 +31,8 @@ pub fn for_each_frame(path: &Path, run: &mut dyn FnMut(RgbImage) -> Result<(), B
         Flags::BILINEAR,
     )?;
 
+    let mut chunk = vec![];
+
     let mut receive_and_process_decoded_frames =
         |decoder: &mut ffmpeg::decoder::Video| -> Result<(), Box<dyn Error>> {
             let mut decoded = Video::empty();
@@ -36,10 +41,15 @@ pub fn for_each_frame(path: &Path, run: &mut dyn FnMut(RgbImage) -> Result<(), B
                 scaler.run(&decoded, &mut video_frame)?;
 
                 let raw = video_frame.data(0).to_vec();
-                let frame = image::RgbImage::from_raw(video_frame.width(), video_frame.height(), raw);
+                let frame = RgbImage::from_raw(video_frame.width(), video_frame.height(), raw);
                 let frame = frame.unwrap();
 
-                run(frame)?
+                chunk.push(frame);
+                if chunk.len() == FRAME_CHUNKS {
+                    let chunk = std::mem::take(&mut chunk);
+                    let chunk: Vec<_> = chunk.into_par_iter().map(run).collect();
+                    chunk_consumer(chunk);
+                }
             }
             Ok(())
         };
@@ -52,6 +62,9 @@ pub fn for_each_frame(path: &Path, run: &mut dyn FnMut(RgbImage) -> Result<(), B
     }
     decoder.send_eof()?;
     receive_and_process_decoded_frames(&mut decoder)?;
+
+    let chunk: Vec<_> = chunk.into_par_iter().map(run).collect();
+    chunk_consumer(chunk);
 
     Ok(())
 }

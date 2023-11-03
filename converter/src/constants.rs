@@ -57,4 +57,4 @@ pub static CODEPAGE_737: LazyLock<RgbImage> = LazyLock::new(|| {
         .into_rgb8()
 });
 
-pub static VGACHAR_LOOKUP: LazyLock<[(VGAChar, RgbImage); POSSIBLE_CHARS]> = LazyLock::new(VGAChar::generate_lookup_table);
+pub static VGACHAR_LOOKUP: LazyLock<Box<[(VGAChar, RgbImage)]>> = LazyLock::new(VGAChar::generate_lookup_table);
