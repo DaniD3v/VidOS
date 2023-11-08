@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::time::Instant;
 
 use image::{GenericImageView, Rgb, RgbImage};
@@ -35,6 +36,7 @@ impl VGAChar {
 
     pub fn generate_lookup_table() -> Box<[(Self, Chunk)]> {
         let now = Instant::now();
+        let mut seen_chunks = HashSet::with_capacity(POSSIBLE_CHARS);
         let mut table = Vec::with_capacity(POSSIBLE_CHARS);
 
         for char in 0..=255 {
@@ -44,12 +46,16 @@ impl VGAChar {
                     let render = char.render();
                     let chunk = Chunk::new(render.view(0, 0, CHAR_WIDTH, CHAR_HEIGHT));
 
-                    table.push((char, chunk));
+                    if !seen_chunks.contains(&chunk) {
+                        table.push((char, chunk.clone()));
+                        seen_chunks.insert(chunk);
+                    }
                 }
             }
         }
 
         println!("Generating lookup table took {:?}", now.elapsed());
+        println!("Lookup Table Entries: {}", table.len());
         table.into_boxed_slice()
     }
 
