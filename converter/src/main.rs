@@ -1,6 +1,9 @@
 #![feature(lazy_cell)]
 #![feature(path_file_prefix)]
 #![feature(fs_try_exists)]
+#![feature(slice_as_chunks)]
+#![feature(slice_flatten)]
+
 
 pub mod constants;
 pub mod image;
@@ -34,9 +37,12 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         }
 
         fn process_frame(frame: RgbImage) -> ProcessedImage {
-            println!("Processing Frame.");
+            let start = Instant::now();
+            println!("Processing Frame...");
 
-            Image::from(frame).process_image()
+            let ret = Image::from(frame).process_image();
+            println!("Processing Frame took {:#?}", start.elapsed());
+            ret
         }
 
         for_each_frame(&path, &process_frame, &|chunk| {

@@ -1,3 +1,4 @@
+use std::arch::x86_64::{__m128i, _mm_sad_epu8};
 use std::error::Error;
 use std::path::PathBuf;
 
@@ -54,7 +55,7 @@ impl From<RgbImage> for Image {
                 VGA_PIXEL_WIDTH,
                 VGA_PIXEL_HEIGHT,
                 FilterType::Triangle,
-            )
+            ),
         }
     }
 }
@@ -73,8 +74,13 @@ impl ProcessedImage {
 
         for x in 0..VGA_CHAR_WIDTH as u32 {
             for y in 0..VGA_CHAR_HEIGHT as u32 {
-                let image = &VGACHAR_LOOKUP[self.chars[y as usize][x as usize].lookup_index()].1;
-                image_buf.copy_from(image, x * CHAR_WIDTH, y * CHAR_HEIGHT)?;
+                let chunk = &VGACHAR_LOOKUP[self.chars[y as usize][x as usize].lookup_index()].1;
+                // TODO: this sucks
+                let chunk = chunk.image.flatten().to_vec();
+
+                let image = RgbImage::from_raw(CHAR_WIDTH, CHAR_HEIGHT, chunk.flatten().to_vec());
+                let image = image.unwrap();
+                image_buf.copy_from(&image, x * CHAR_WIDTH, y * CHAR_HEIGHT)?;
             }
         }
 
@@ -91,54 +97,85 @@ impl ProcessedImage {
     }
 }
 
-struct Chunk<'a> { // TODO impl Hash -> cache frequent chunks
-    image: SubImage<&'a RgbImage>,
+type Grid = [[[u8; 3]; CHAR_WIDTH as usize]; CHAR_HEIGHT as usize];
+
+#[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), feature = "simd_if_available"))]
+pub fn total_diff(left: &Grid, right: &Grid) -> u32 {
+    let left: &[__m128i; 27] = unsafe { std::mem::transmute(left) };
+    let right: &[__m128i; 27] = unsafe { std::mem::transmute(right) };
+
+    let mut total = 0;
+
+    for i in 0..27 {
+        let left = left[i];
+        let right = right[i];
+
+        let sums = unsafe { _mm_sad_epu8(left, right) };
+
+        let sums: [u64; 2] = unsafe { std::mem::transmute(sums) };
+        for i in sums {
+            total += i as u32;
+        }
+    }
+
+    total
 }
 
-impl<'a> Chunk<'a> {
-    pub fn new(image: SubImage<&'a RgbImage>) -> Self {
-        Chunk { image }
+#[cfg(not(all(any(target_arch = "x86", target_arch = "x86_64"), feature = "simd_if_available")))]
+pub fn total_diff(left: &Grid, right: &Grid) -> u32 {
+    let mut difference = 0u32;
+
+    for y in 0..CHAR_HEIGHT {
+        for x in 0..CHAR_WIDTH {
+            let pixel = left[y as usize][x as usize];
+            let other_pixel = right[y as usize][x as usize];
+
+            for color in 0..3 {
+                difference += (pixel[color] as i32 - other_pixel[color] as i32).unsigned_abs();
+            }
+        }
+    }
+
+    difference
+}
+
+#[derive(Hash, Clone, Eq, PartialEq)]
+pub struct Chunk { // TODO impl Hash -> cache frequent chunks
+    image: Box<Grid>,
+}
+
+impl Chunk {
+    pub fn new(image: SubImage<&RgbImage>) -> Self {
+        let pixels: Vec<_> = image.pixels().map(|(_, _, c)| c.0).collect();
+        let pixels: &[[[u8; 3]; CHAR_WIDTH as usize]] = pixels.as_chunks().0;
+        Chunk {
+            image: pixels.to_vec().into_boxed_slice().try_into().unwrap(), // TODO this sucks
+        }
     }
 
     pub fn get_best_char(&self) -> VGAChar {
+        if let Some(char) = FIXED_CACHE.get(self) {
+            return *char;
+        }
+
+        if let Some(char) = DYNAMIC_CACHE.lock().unwrap().get(self) {
+            return *char;
+        }
+
         let mut min_difference = u32::MAX;
         let mut best_char = &VGAChar::uninit();
 
-        for possibility in 0..POSSIBLE_CHARS as u32 {
-            let difference = self.difference(possibility, min_difference);
+        for (char, other) in VGACHAR_LOOKUP.iter() {
+            let difference = total_diff(&self.image, &other.image);
 
-            if let Some(difference) = difference {
+            if difference < min_difference {
                 min_difference = difference;
-                best_char = &VGACHAR_LOOKUP[possibility as usize].0;
+                best_char = char;
             }
         }
+
+        DYNAMIC_CACHE.lock().unwrap().insert(self.clone(), *best_char);
 
         *best_char
-    }
-
-    fn difference(&self, char: u32, stop: u32) -> Option<u32> {
-        let other = &VGACHAR_LOOKUP[char as usize].1;
-
-        let bounds = self.image.bounds();
-        let bounds = (bounds.2, bounds.3);
-        assert_eq!(bounds, (other.bounds().2, other.bounds().3));
-
-        let mut difference = 0u32;
-
-        for y in 0..bounds.1 {
-            for x in 0..bounds.0 {
-                let pixel = self.image.get_pixel(x, y);
-                let other_pixel = other.get_pixel(x, y);
-
-                for color in 0..3 {
-                    difference += (pixel[color] as i32 - other_pixel[color] as i32).unsigned_abs();
-                }
-            }
-            if difference > stop {
-                return None;
-            }
-        }
-
-        Some(difference)
     }
 }

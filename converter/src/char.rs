@@ -3,6 +3,7 @@ use std::time::Instant;
 use image::{GenericImageView, Rgb, RgbImage};
 
 use crate::constants::*;
+use crate::image::Chunk;
 
 #[derive(Debug, Clone, Copy)]
 pub struct VGAChar {
@@ -32,7 +33,7 @@ impl VGAChar {
         }
     }
 
-    pub fn generate_lookup_table() -> Box<[(Self, RgbImage)]> {
+    pub fn generate_lookup_table() -> Box<[(Self, Chunk)]> {
         let now = Instant::now();
         let mut table = Vec::with_capacity(POSSIBLE_CHARS);
 
@@ -41,8 +42,9 @@ impl VGAChar {
                 for background in 0..BACKGROUND.len() as u8 {
                     let char = Self::new(char, foreground, background);
                     let render = char.render();
+                    let chunk = Chunk::new(render.view(0, 0, CHAR_WIDTH, CHAR_HEIGHT));
 
-                    table.push((char, render));
+                    table.push((char, chunk));
                 }
             }
         }
