@@ -13,16 +13,39 @@ mod video;
 use std::error::Error;
 use std::fs;
 use std::fs::read_dir;
+use std::intrinsics::size_of;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use ::image::RgbImage;
+use crate::char::VGAChar;
+use crate::constants::DYNAMIC_CACHE;
 
-use crate::image::{Image, ProcessedImage};
+use crate::image::{Chunk, Image, ProcessedImage};
 use crate::video::for_each_frame;
+
+
+pub fn cache_cleaner() {
+    // 1Gb
+    const MAX_BYTES: usize = 1024 * 1024 * 1024;
+
+    loop {
+        let mut map = DYNAMIC_CACHE.lock().unwrap();
+        let size = map.len() * size_of::<Chunk>() * size_of::<VGAChar>();
+
+        if size > MAX_BYTES {
+            // TODO: is throwing the whole cache away really the best
+            map.clear();
+        }
+        drop(map);
+
+        std::thread::sleep(Duration::from_secs(60))
+    }
+}
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     ffmpeg::init()?;
+
 
     // for file in read_dir("./examples/images/in")? {
     //     let path = file?.path();
@@ -45,6 +68,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
             ret
         }
 
+        std::thread::spawn(cache_cleaner);
         for_each_frame(&path, &process_frame, &|chunk| {
             let mut bytes = vec![];
             for processed in &chunk {
