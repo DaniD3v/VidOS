@@ -1,11 +1,13 @@
+use std::collections::HashMap;
 use std::io::Cursor;
-use std::sync::LazyLock;
+use std::sync::{LazyLock, Mutex};
 
-use image::ImageFormat::Png;
 use image::io::Reader;
+use image::ImageFormat::Png;
 use image::RgbImage;
 
 use crate::char::VGAChar;
+use crate::image::Chunk;
 
 pub const CHAR_WIDTH: u32 = 9;
 pub const CHAR_HEIGHT: u32 = 16;
@@ -57,4 +59,46 @@ pub static CODEPAGE_737: LazyLock<RgbImage> = LazyLock::new(|| {
         .into_rgb8()
 });
 
-pub static VGACHAR_LOOKUP: LazyLock<[(VGAChar, RgbImage); POSSIBLE_CHARS]> = LazyLock::new(VGAChar::generate_lookup_table);
+pub static VGACHAR_LOOKUP: LazyLock<Box<[(VGAChar, Chunk)]>> =
+    LazyLock::new(VGAChar::generate_lookup_table);
+pub static BITMAPS: LazyLock<
+    Box<
+        [(
+            u32,
+            u32,
+            [[bool; CHAR_WIDTH as usize]; CHAR_HEIGHT as usize],
+        ); 236],
+    >,
+> = LazyLock::new(VGAChar::generate_bitmaps);
+
+pub static DYNAMIC_CACHE: LazyLock<Mutex<HashMap<Chunk, VGAChar>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+pub static FIXED_CACHE: LazyLock<HashMap<Chunk, VGAChar>> = LazyLock::new(|| {
+    let mut map = HashMap::with_capacity(VGACHAR_LOOKUP.len());
+    for (char, chunk) in VGACHAR_LOOKUP.iter() {
+        map.insert(chunk.clone(), *char);
+    }
+    map
+});
+
+#[cfg(test)]
+mod tests {
+    use crate::constants::VGACHAR_LOOKUP;
+
+    #[test]
+    fn lookup_index() {
+        for (i, (v, _)) in VGACHAR_LOOKUP.iter().enumerate() {
+            assert_eq!(i, v.lookup_index());
+        }
+    }
+
+    #[test]
+    fn best_char_lookup() {
+        for (i, (v, x)) in VGACHAR_LOOKUP.iter().enumerate() {
+            let best = x.get_best_char();
+            let best = &VGACHAR_LOOKUP[best.lookup_index()].1;
+            assert_eq!(x, best);
+        }
+    }
+}

@@ -6,9 +6,23 @@ use core::mem::transmute;
 
 const VGA_BUFFER: *mut u8 = 0xb8000 as *mut u8;
 const SECOND: u32 = 290000000; // TODO this is so bad pls make a hw-clock implementation
-const FRAMES: usize = 6572;
 
-static VIDEO: &[[u8; 4000]; FRAMES] = unsafe { transmute(include_bytes!("../../converter/examples/videos/ser/BadApple.bin")) };
+macro_rules! path {
+    () => { "../../converter/examples/videos/ser/BadApple.bin" };
+}
+
+
+const FRAME_COUNT: usize = {
+    let input = include_bytes!(path!());
+    if input.len() % FRAME_SIZE != 0 {
+        // TODO warning
+    }
+
+    input.len() / FRAME_SIZE
+};
+const FRAME_SIZE: usize = 4000;
+
+static VIDEO: &[[u8; FRAME_SIZE]; FRAME_COUNT] = unsafe { transmute(include_bytes!(path!())) };
 
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
