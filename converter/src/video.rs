@@ -1,15 +1,19 @@
-use std::error::Error;
 use ffmpeg::format::{input, Pixel};
 use ffmpeg::media::Type;
 use ffmpeg::software::scaling::{context::Context, flag::Flags};
 use ffmpeg::util::frame::video::Video;
-use std::path::Path;
 use image::RgbImage;
 use rayon::prelude::*;
+use std::error::Error;
+use std::path::Path;
 
-const FRAME_CHUNKS: usize = 128;
+const FRAME_CHUNKS: usize = 256;
 
-pub fn for_each_frame<T: Send>(path: &Path, run: &(dyn Fn(RgbImage) -> T + Send + Sync), chunk_consumer: &dyn Fn(Vec<T>)) -> Result<(), Box<dyn Error>> {
+pub fn for_each_frame<T: Send>(
+    path: &Path,
+    run: &(dyn Fn(RgbImage) -> T + Send + Sync),
+    chunk_consumer: &dyn Fn(Vec<T>),
+) -> Result<(), Box<dyn Error>> {
     let mut ictx = input(&path)?;
 
     let input = ictx

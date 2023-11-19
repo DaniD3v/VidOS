@@ -4,26 +4,24 @@
 #![feature(slice_as_chunks)]
 #![feature(slice_flatten)]
 
-
+pub mod char;
 pub mod constants;
 pub mod image;
-pub mod char;
 mod video;
 
+use crate::char::VGAChar;
+use crate::constants::DYNAMIC_CACHE;
+use ::image::RgbImage;
 use std::error::Error;
 use std::fs;
 use std::fs::read_dir;
-use std::intrinsics::size_of;
 use std::io::Write;
+use std::mem::size_of;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
-use ::image::RgbImage;
-use crate::char::VGAChar;
-use crate::constants::DYNAMIC_CACHE;
 
 use crate::image::{Chunk, Image, ProcessedImage};
 use crate::video::for_each_frame;
-
 
 pub fn cache_cleaner() {
     // 1Gb
@@ -35,6 +33,7 @@ pub fn cache_cleaner() {
 
         if size > MAX_BYTES {
             // TODO: is throwing the whole cache away really the best
+            println!("..... CLEARING CACHE");
             map.clear();
         }
         drop(map);
@@ -45,7 +44,6 @@ pub fn cache_cleaner() {
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     ffmpeg::init()?;
-
 
     // for file in read_dir("./examples/images/in")? {
     //     let path = file?.path();
@@ -78,9 +76,12 @@ pub fn main() -> Result<(), Box<dyn Error>> {
             println!("Wrote chunk of {} Frames!", chunk.len());
 
             fs::OpenOptions::new()
-                .append(true).create(true)
-                .open(dir_path(&path, "ser", "bin")).unwrap()
-                .write_all(&bytes).unwrap();
+                .append(true)
+                .create(true)
+                .open(dir_path(&path, "ser", "bin"))
+                .unwrap()
+                .write_all(&bytes)
+                .unwrap();
         })?;
     }
 
@@ -90,18 +91,21 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 fn process_image(path: &PathBuf) -> Result<(), Box<dyn Error>> {
     let image = Image::new(path)?;
 
-    println!("Processing image {:?} -> {}", path, dir_path(path, "ser", "bin"));
+    println!(
+        "Processing image {:?} -> {}",
+        path,
+        dir_path(path, "ser", "bin")
+    );
 
     let time = Instant::now();
     let image = image.process_image();
     println!("{:?} elapsed.", time.elapsed());
 
-    image
-        .render()?
-        .save(dir_path(path, "out", "png"))?;
+    image.render()?.save(dir_path(path, "out", "png"))?;
 
     fs::OpenOptions::new()
-        .write(true).create(true)
+        .write(true)
+        .create(true)
         .open(dir_path(path, "ser", "bin"))?
         .write_all(&image.serialize())?;
 

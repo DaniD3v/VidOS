@@ -24,7 +24,7 @@ impl Image {
                 VGA_PIXEL_WIDTH,
                 VGA_PIXEL_HEIGHT,
                 FilterType::Triangle,
-            )
+            ),
         })
     }
 
@@ -39,7 +39,8 @@ impl Image {
                     y as u32 * CHAR_HEIGHT,
                     CHAR_WIDTH,
                     CHAR_HEIGHT,
-                )).get_best_char();
+                ))
+                .get_best_char();
             }
         }
 
@@ -87,19 +88,27 @@ impl ProcessedImage {
         Ok(image_buf)
     }
 
-    pub fn serialize(&self) -> [u8; VGA_WORD_SIZE*2] {
-        unsafe { std::mem::transmute::<[u16; VGA_WORD_SIZE], _>(
-            self.chars.iter().flatten()
-                .map(VGAChar::vga_format)
-                .collect::<Vec<u16>>()
-                .try_into().unwrap()
-        ) }
+    pub fn serialize(&self) -> [u8; VGA_WORD_SIZE * 2] {
+        unsafe {
+            std::mem::transmute::<[u16; VGA_WORD_SIZE], _>(
+                self.chars
+                    .iter()
+                    .flatten()
+                    .map(VGAChar::vga_format)
+                    .collect::<Vec<u16>>()
+                    .try_into()
+                    .unwrap(),
+            )
+        }
     }
 }
 
 type Grid = [[[u8; 3]; CHAR_WIDTH as usize]; CHAR_HEIGHT as usize];
 
-#[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), feature = "simd_if_available"))]
+#[cfg(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    feature = "simd_if_available"
+))]
 pub fn total_diff(left: &Grid, right: &Grid) -> u32 {
     let left: &[__m128i; 27] = unsafe { std::mem::transmute(left) };
     let right: &[__m128i; 27] = unsafe { std::mem::transmute(right) };
@@ -121,7 +130,10 @@ pub fn total_diff(left: &Grid, right: &Grid) -> u32 {
     total
 }
 
-#[cfg(not(all(any(target_arch = "x86", target_arch = "x86_64"), feature = "simd_if_available")))]
+#[cfg(not(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    feature = "simd_if_available"
+)))]
 pub fn total_diff(left: &Grid, right: &Grid) -> u32 {
     let mut difference = 0u32;
 
@@ -139,8 +151,9 @@ pub fn total_diff(left: &Grid, right: &Grid) -> u32 {
     difference
 }
 
-#[derive(Hash, Clone, Eq, PartialEq)]
-pub struct Chunk { // TODO impl Hash -> cache frequent chunks
+#[derive(Hash, Clone, Eq, PartialEq, Debug)]
+pub struct Chunk {
+    // TODO impl Hash -> cache frequent chunks
     image: Box<Grid>,
 }
 
@@ -162,20 +175,78 @@ impl Chunk {
             return *char;
         }
 
-        let mut min_difference = u32::MAX;
-        let mut best_char = &VGAChar::uninit();
+        let mut min_diff = u32::MAX;
+        let mut best_char = None;
 
-        for (char, other) in VGACHAR_LOOKUP.iter() {
-            let difference = total_diff(&self.image, &other.image);
+        for (char_i, (mut fg_count, mut bg_count, char)) in BITMAPS.iter().enumerate() {
+            let (fg_sum, bg_sum) = sums(&self.image, char);
 
-            if difference < min_difference {
-                min_difference = difference;
-                best_char = char;
+            if bg_count == 0 {
+                assert_eq!(bg_sum, [0, 0, 0]);
+                bg_count = 1;
+            }
+            if fg_count == 0 {
+                assert_eq!(fg_sum, [0, 0, 0]);
+                fg_count = 1;
+            }
+
+            let fg_avg = fg_sum.map(|x| (x as f64 / fg_count as f64).round() as u8);
+            let bg_avg = bg_sum.map(|x| (x as f64 / bg_count as f64).round() as u8);
+
+            let fg = most_similar(fg_avg, &FOREGROUND);
+            let bg = most_similar(bg_avg, &BACKGROUND);
+
+            let char = VGAChar::new(char_i as u8, fg as u8, bg as u8);
+            let new_char = &VGACHAR_LOOKUP[char.lookup_index()].1.image;
+            let diff = total_diff(&self.image, new_char);
+
+            if diff < min_diff {
+                min_diff = diff;
+                best_char = Some(char);
             }
         }
 
-        DYNAMIC_CACHE.lock().unwrap().insert(self.clone(), *best_char);
+        let best_char = best_char.expect("Is CHARS empty?");
+        DYNAMIC_CACHE
+            .lock()
+            .unwrap()
+            .insert(self.clone(), best_char);
 
-        *best_char
+        best_char
     }
+}
+
+fn most_similar(to: [u8; 3], from: &[[u8; 3]]) -> usize {
+    from.iter()
+        .enumerate()
+        .min_by_key(|(_, v)| {
+            to[0].abs_diff(v[0]) as u32 + to[1].abs_diff(v[1]) as u32 + to[2].abs_diff(v[2]) as u32
+        })
+        .map(|(i, _)| i)
+        .unwrap()
+}
+
+pub fn sums(
+    colored: &Grid,
+    bitmap: &[[bool; CHAR_WIDTH as usize]; CHAR_HEIGHT as usize],
+) -> ([u32; 3], [u32; 3]) {
+    let mut fg_sum = [0; 3];
+    let mut bg_sum = [0; 3];
+
+    for y in 0..CHAR_HEIGHT as usize {
+        for x in 0..CHAR_WIDTH as usize {
+            let color = colored[y][x];
+            if bitmap[y][x] {
+                fg_sum[0] += color[0] as u32;
+                fg_sum[1] += color[1] as u32;
+                fg_sum[2] += color[2] as u32;
+            } else {
+                bg_sum[0] += color[0] as u32;
+                bg_sum[1] += color[1] as u32;
+                bg_sum[2] += color[2] as u32;
+            }
+        }
+    }
+
+    (fg_sum, bg_sum)
 }
